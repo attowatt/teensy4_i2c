@@ -433,6 +433,10 @@ void IMX_RT1060_I2CSlave::listen(uint32_t samr, uint32_t address_config) {
     // Make sure slave mode is disabled before configuring it.
     stop_listening();
 
+    // Halt and reset Slave Mode if it's running
+    port->SCR = (LPI2C_SCR_RST | LPI2C_SCR_RRF | LPI2C_SCR_RTF);
+    port->SCR = 0;
+
     initialise_common(config, pad_control_config);
 
     // Set the Slave Address
@@ -440,13 +444,15 @@ void IMX_RT1060_I2CSlave::listen(uint32_t samr, uint32_t address_config) {
 
     // Enable clock stretching
     port->SCFGR1 = (address_config | LPI2C_SCFGR1_TXDSTALL | LPI2C_SCFGR1_RXSTALL);
+    port->SCFGR2 = (LPI2C_SCFGR2_FILTSDA(15) | LPI2C_SCFGR2_FILTSCL(15));
+
     // Set up interrupts
     attachInterruptVector(config.irq, isr);
     port->SIER = (LPI2C_SIER_RSIE | LPI2C_SIER_SDIE | LPI2C_SIER_TDIE | LPI2C_SIER_RDIE);
     NVIC_ENABLE_IRQ(config.irq);
 
     // Enable Slave Mode
-    port->SCR = LPI2C_SCR_SEN;
+    port->SCR = LPI2C_SCR_SEN | LPI2C_SCR_FILTEN;
 }
 
 inline void IMX_RT1060_I2CSlave::stop_listening() {
